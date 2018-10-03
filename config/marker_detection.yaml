@@ -1,0 +1,7 @@
+model_path: [/home/mykyta/catkin_ws/install/share/drive_ros_marker_detection/images/30_sign.yaml]
+display_results: True
+greedy_factor: 0.3
+min_score: 50000
+search_region_row: [0.3, 0.6]
+search_region_col: [0.1, 0.5]
+cv_mat_stored: False

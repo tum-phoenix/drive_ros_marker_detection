@@ -1,0 +1,6 @@
+<launch>
+    <node name="image_publisher" pkg="image_publisher" type="image_publisher" respawn="false" output="screen" args="/home/mykyta/Pictures/Homographied_screenshot_03.10.2018.png">
+        <param name="filename" value="/home/mykyta/Pictures/Homographied_screenshot_03.10.2018.png"/>
+        <remap from="/image_raw" to="/warped_image"/>
+    </node>
+</launch>

@@ -1,0 +1,27 @@
+<launch>
+    <arg name="input_topic" default="/warped_image"/>
+    <arg name="debug" default="false"/>
+    <arg name="use_nodelet" default="false"/>
+    <arg name="nodelet_manager" default=""/>
+
+    <arg if="$(arg debug)" name="launch-prefix" value="gdb -ex run --args"/>
+    <arg unless="$(arg debug)" name="launch-prefix" value=""/>
+
+    <group unless="$(arg use_nodelet)">
+        <node name="marker_detection_node" pkg="drive_ros_marker_detection" type="marker_detection_node" respawn="false" output="screen" launch-prefix="$(arg launch-prefix)">
+            <remap from="img_in" to="$(arg input_topic)"/>
+            <rosparam command="load" file="$(find drive_ros_marker_detection)/config/marker_detection.yaml"/>
+        </node>
+    </group>
+
+    <group if="$(arg use_nodelet)">
+        <arg if="$(eval arg('nodelet_manager') == '')" name="manager_used" value="warp_image_nodelet_manager"/>
+        <arg unless="$(eval arg('nodelet_manager') == '')" name="manager_used" value="$(arg nodelet_manager)"/>
+
+        <node if="$(eval arg('nodelet_manager') == '')" pkg="nodelet" type="nodelet" name="warp_image_nodelet_manager"  args="manager" output="screen"/>
+        <node pkg="nodelet" type="nodelet" name="marker_detection_nodelet" args="load drive_ros_marker_detection/MarkerDetectionNodelet $(arg manager_used)" output="screen" launch-prefix="$(arg launch-prefix)">
+            <remap from="img_in" to="$(arg input_topic)"/>
+            <rosparam command="load" file="$(find drive_ros_marker_detection)/config/marker_detection.yaml"/>
+        </node>
+    </group>
+</launch>

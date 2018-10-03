@@ -1,0 +1,9 @@
+<launch>
+    <arg name="debug" default="false"/>
+    <arg if="$(arg debug)" name="launch-prefix" value="gdb -ex run --args"/>
+    <arg unless="$(arg debug)" name="launch-prefix" value=""/>
+
+    <node name="feature_extractor_node" pkg="drive_ros_marker_detection" type="feature_extractor_node" respawn="false" output="screen" launch-prefix="$(arg launch-prefix)">
+        <rosparam command="load" file="$(find drive_ros_marker_detection)/config/feature_extractor_30sign.yaml"/>
+    </node>
+</launch>

@@ -1,0 +1,8 @@
+<!-- marker detection nodelet -->
+<library path="lib/libmarker_detection_nodelet">
+  <class name="drive_ros_image_recognition/MarkerDetectionNodelet" type="drive_ros_image_recognition::MarkerDetectionNodelet" base_class_type="nodelet::Nodelet">
+  <description>
+  Marker detection nodelet.
+  </description>
+  </class>
+</library>

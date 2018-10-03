@@ -1,0 +1,8 @@
+reference_image_path: /home/mykyta/catkin_ws/src/drive_ros_marker_detection/images/30_sign.png
+save_path: /home/mykyta/catkin_ws/install/share/drive_ros_marker_detection/images/30_sign
+display_results: True
+model_template_size: [70, 175]
+num_pyramid_levels: 2
+rotation_step: 3.75
+min_contrast: 0.01
+max_contrast: 0.02
