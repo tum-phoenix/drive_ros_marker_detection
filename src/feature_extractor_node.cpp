@@ -3,8 +3,6 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include <boost/filesystem/path.hpp>
-#include <algorithm>
 
 int main(int argc, char **argv)
 {
@@ -48,29 +46,16 @@ int main(int argc, char **argv)
     return -1;
   }
 
-  double rotation_step;
+  int rotation_step;
   if (!pnh.getParam("rotation_step", rotation_step)) {
     ROS_ERROR_STREAM("Unable to get 'rotation_step' parameter, shutting down!");
     return -1;
   }
 
-  std::string save_path, model_name;
+  std::string save_path;
   if (!pnh.getParam("save_path", save_path)) {
     ROS_ERROR_STREAM("Unable to get 'save_path' parameter, shutting down!");
     return -1;
-  }
-  boost::filesystem::path path(save_path);
-  model_name = path.stem().string();
-  ROS_INFO_STREAM("BOOST FILENAME: "<<model_name);
-
-  int background_color = 0, border_mode;
-  if (!pnh.getParam("background_color", background_color)) {
-    ROS_INFO_STREAM("Unable to get 'backround_color' parameter, using cv::BORDER_REPLICATE instead!");
-    border_mode = cv::BORDER_REPLICATE;
-  }
-  else
-  {
-    border_mode = cv::BORDER_CONSTANT;
   }
 
   cv::resize(reference_image, reference_image, cv::Size(model_template_size[0], model_template_size[1]));
@@ -87,42 +72,19 @@ int main(int argc, char **argv)
   cv::Mat rotated_reference_image;
   std::stringstream ss;
 
-  ss.str("");
-  ss << save_path << ".yaml";
-  ROS_INFO_STREAM("Saving model to "<<ss.str());
-  cv::FileStorage fs(ss.str(), cv::FileStorage::WRITE);
-  fs << "model_name" << model_name;
-  fs << "rotation_step_lowest_level" << rotation_step;
-  fs << "num_pyramid_levels" << num_pyramid_levels;
-  fs << "model";
-
-  ss.str("");
-  ss << save_path << "_mat.yaml";
-  cv::FileStorage fs_mat(ss.str(), cv::FileStorage::WRITE);
-  fs_mat << "model_name" << model_name;
-  fs_mat << "rotation_step_lowest_level" << rotation_step;
-  fs_mat << "num_pyramid_levels" << num_pyramid_levels;
-  fs_mat << "model";
-
-  fs << "{";
-  fs_mat << "{";
   // generate edge model for each pyramid level
-  for (int pyramid_level = 0; pyramid_level < num_pyramid_levels; ++pyramid_level)
+  for (int pyramid_level = num_pyramid_levels-1; pyramid_level > 0; --pyramid_level)
   {
-    ss.str("");
-    ss << "pyramid_level_" << pyramid_level;
-    ROS_INFO_STREAM("pyramid str "<< ss.str());
-    fs << ss.str() << "{";
-    fs_mat << ss.str() << "{";
 
     ROS_INFO_STREAM("Image size at pyramid level "<<pyramid_level<<": "<<converted_reference_image.size());
 
-    for (double rotation = 0.0; rotation < 360.0; rotation += rotation_step)
+    // TODO: add more rotation steps at lower levels than at higher levels
+    for (int rotation = 0; rotation < 360; rotation += rotation_step)
     {
 
-      if (rotation != 0.0)
+      if (rotation != 0)
       {
-        // rotate around the image corner, makes computation easier - OpenCV doesn't have cropped rotation
+        // rotate around the image corner, makes computation easier
         image_center = cv::Point((int)(converted_reference_image.rows/2), (int)(converted_reference_image.cols/2));
         rotation_rad = (double)(rotation)/180.0*M_PI;
         rot_mat = cv::getRotationMatrix2D(cv::Point(0, 0), rotation, 1.0);
@@ -135,8 +97,7 @@ int main(int argc, char **argv)
         rot_mat.at<double>(0, 2) = image_rotated.boundingRect().width*0.5 - rotated_center_mat.at<double>(1, 0);
         rot_mat.at<double>(1, 2) = image_rotated.boundingRect().height*0.5 - rotated_center_mat.at<double>(0, 0);
         cv::warpAffine(converted_reference_image, rotated_reference_image, rot_mat,
-                       cv::Size(image_rotated.boundingRect().width, image_rotated.boundingRect().height),
-                       cv::INTER_LINEAR, border_mode, cv::Scalar(background_color));
+                       cv::Size(image_rotated.boundingRect().width, image_rotated.boundingRect().height));
       }
       else
       {
@@ -152,8 +113,8 @@ int main(int argc, char **argv)
       // step 1: detect edges in the image and group them by direction
       cv::Mat grad_x = cv::Mat::zeros(rotated_reference_image.rows, rotated_reference_image.cols, CV_64FC1);
       cv::Mat grad_y = cv::Mat::zeros(rotated_reference_image.rows, rotated_reference_image.cols, CV_64FC1);
-      cv::Sobel( rotated_reference_image*1/255, grad_x, CV_64F, 1, 0/*, 3, 0.125*/); //gradient in X direction
-      cv::Sobel( rotated_reference_image*1/255, grad_y, CV_64F, 0, 1/*, 3, 0.125*/); //gradient in Y direction
+      cv::Sobel( rotated_reference_image, grad_x, CV_64F, 1, 0); //gradient in X direction
+      cv::Sobel( rotated_reference_image, grad_y, CV_64F, 0, 1); //gradient in Y direction
 
       CV_Assert(grad_x.size == grad_y.size);
       CV_Assert(grad_x.type() == grad_y.type());
@@ -168,10 +129,11 @@ int main(int argc, char **argv)
         cv::imshow("Sobel x", grad_x);
         cv::namedWindow("Sobel y", CV_WINDOW_NORMAL);
         cv::imshow("Sobel y", grad_y);
+        cv::waitKey(0);
       }
 
       //Magnitude = Sqrt(gx^2 +gy^2)
-      cv::magnitude(grad_x, grad_y, magn_mat);
+      cv::pow(grad_x + grad_y, 2, magn_mat);
       double min_gradient = 0.0, max_gradient = 0.0;
       cv::minMaxLoc(magn_mat, &min_gradient, &max_gradient);
 
@@ -215,6 +177,7 @@ int main(int argc, char **argv)
         cv::imshow("Edge magnitude", magn_mat);
         cv::namedWindow("Edge direction", CV_WINDOW_NORMAL);
         cv::imshow("Edge direction", orientations);
+        cv::waitKey(0);
       }
 
       // step 2: non-maximum suppression
@@ -273,49 +236,26 @@ int main(int argc, char **argv)
       cv::Mat hys_edges;
       cv::threshold(nms_edges, hys_edges, min_contrast, -1, cv::THRESH_TOZERO);
 
-      std::vector<int> template_coordinates_x;
-      std::vector<int> template_coordinates_y;
-      std::vector<double> template_magnitudes;
-      std::vector<double> template_grad_x;
-      std::vector<double> template_grad_y;
       for(int i = 1; i < grad_x.rows; i++ )
       {
         for(int j = 1; j < grad_x.cols; j++ )
         {
-          if (hys_edges.at<double>(i, j) < max_contrast)
+          if (nms_edges.at<double>(i, j) < max_contrast)
           {
             // if any of 8 neighboring pixel is not greater than max contraxt remove from edge
-            if( (hys_edges.at<double>(i-1, j-1) < max_contrast) &&
-                (hys_edges.at<double>(i-1, j) < max_contrast)   &&
-                (hys_edges.at<double>(i-1, j+1) < max_contrast) &&
-                (hys_edges.at<double>(i, j-1) < max_contrast)     &&
-                (hys_edges.at<double>(i, j+1) < max_contrast) &&
-                (hys_edges.at<double>(i+1, j-1) < max_contrast) &&
-                (hys_edges.at<double>(i+1, j) < max_contrast)   &&
-                (hys_edges.at<double>(i+1, j+1) < max_contrast))
+            if( (nms_edges.at<double>(i-1, j-1) < max_contrast) &&
+                (nms_edges.at<double>(i-1, j) < max_contrast)   &&
+                (nms_edges.at<double>(i-1, j+1) < max_contrast) &&
+                (nms_edges.at<double>(i, j-1) < max_contrast)     &&
+                (nms_edges.at<double>(i, j+1) < max_contrast) &&
+                (nms_edges.at<double>(i+1, j-1) < max_contrast) &&
+                (nms_edges.at<double>(i+1, j) < max_contrast)   &&
+                (nms_edges.at<double>(i+1, j+1) < max_contrast))
             {
               hys_edges.at<double>(i, j) = 0.0;
             }
-            else if (hys_edges.at<double>(i, j) != 0.0)
-            {
-              template_coordinates_x.push_back(i);
-              template_coordinates_y.push_back(j);
-              template_magnitudes.push_back(hys_edges.at<double>(i, j));
-            }
-          }
-          else
-          {
-            template_coordinates_x.push_back(i);
-            template_coordinates_y.push_back(j);
-            template_magnitudes.push_back(hys_edges.at<double>(i, j));
           }
         }
-      }
-
-      for (int i=0; i<template_coordinates_x.size(); ++i)
-      {
-        template_grad_x.push_back(grad_x.at<double>(template_coordinates_x[i], template_coordinates_y[i]));
-        template_grad_y.push_back(grad_y.at<double>(template_coordinates_x[i], template_coordinates_y[i]));
       }
 
       // step 4: display and save the resulting model
@@ -335,7 +275,7 @@ int main(int argc, char **argv)
       cv::imwrite(ss.str(), model_edge_magnitude);
       ROS_INFO_STREAM("Saved magnitude image to "<<ss.str());
 
-      // save edge derivatives (just for visualization)
+      // save edge derivatives
       cv::Mat model_grad_x, model_grad_y;
       grad_x.setTo(0.0, hys_edges==0.0);
       grad_y.setTo(0.0, hys_edges==0.0);
@@ -349,36 +289,9 @@ int main(int argc, char **argv)
       ss << save_path << "_grad_y_" << pyramid_level << "_" << rotation << ".png";
       cv::imwrite(ss.str(), model_grad_y);
       ROS_INFO_STREAM("Saved y gradients to "<<ss.str());
-
-      ss.str("");
-      ss << "rotation_" << rotation;
-      std::string replacement_string = ss.str();
-      std::replace( replacement_string.begin(), replacement_string.end(), '.', '_');
-      ROS_INFO_STREAM("ss str rot "<<replacement_string);
-      fs << replacement_string << "{";
-      fs << "coordinates_x" << template_coordinates_x;
-      fs << "coordinates_y" << template_coordinates_y;
-      fs << "magnitudes" << template_magnitudes;
-      fs << "grad_x" << template_grad_x;
-      fs << "grad_y" << template_grad_y;
-      fs << "}";
-
-      fs_mat << replacement_string << "{";
-      fs_mat << "magnitude_mat" << model_edge_magnitude;
-      fs_mat << "grad_x_mat" << model_grad_x;
-      fs_mat << "grad_y_mat" << model_grad_y;
-      fs_mat << "}";
     }
-    fs << "}";
-    fs_mat << "}";
 
     // move up one pyramid level
     cv::pyrDown(converted_reference_image, converted_reference_image);
-    rotation_step *= 2.0;
   }
-  fs << "}";
-  fs_mat << "}";
-  fs.release();
-  fs_mat.release();
-  return 0;
 }

@@ -34,6 +34,17 @@ public:
   void imageCallback(const sensor_msgs::ImageConstPtr& msg);
 
 private:
+  std::pair<bool, double> matchModel(int i, int j, const ModelType m_type, const cv::Mat &pyramid_grad_x,
+                                     const cv::Mat &pyramid_grad_y, const cv::Mat &pyramid_magnitude,
+                                     const std::string &model_name);
+
+  void drawTemplate(cv::Mat &img,
+                    const std::pair<cv::Point2d, double> &template_coordinates,
+                    const std::vector<int> &pixel_coordinates_x,
+                    const std::vector<int> &pixel_coordinates_y,
+                    const std::string &window_name = "Template in image",
+                    const cv::Vec3b &color = cv::Vec3b(255, 0, 0));
+
   ros::NodeHandle nh_;
   ros::NodeHandle pnh_;
   std::map<std::string, int> num_pyramid_levels_;
