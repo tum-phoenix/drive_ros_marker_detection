@@ -107,7 +107,7 @@ int main(int argc, char **argv)
   fs << "{";
   fs_mat << "{";
   // generate edge model for each pyramid level
-  for (int pyramid_level = num_pyramid_levels-1; pyramid_level > 0; --pyramid_level)
+  for (int pyramid_level = num_pyramid_levels-1; pyramid_level >= 0; --pyramid_level)
   {
     ss.str("");
     ss << "pyramid_level_" << pyramid_level;
