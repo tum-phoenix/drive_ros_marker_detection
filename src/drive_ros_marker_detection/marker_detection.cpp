@@ -200,8 +200,8 @@ void drive_ros_marker_detection::MarkerDetection::imageCallback(const sensor_msg
   pyramid_grad_y.push_back(grad_y.clone());
   if (display_results_)
   {
-    ROS_INFO_STREAM("GRAD X MAT TYPE "<<grad_x.type()<<" GRAD Y MAT TYPE "<<grad_y.type()<<" input image type: "<<search_img.type());
-    ROS_INFO_STREAM("GRAD X MAT "<<grad_x);
+//    ROS_INFO_STREAM("GRAD X MAT TYPE "<<grad_x.type()<<" GRAD Y MAT TYPE "<<grad_y.type()<<" input image type: "<<search_img.type());
+//    ROS_INFO_STREAM("GRAD X MAT "<<grad_x);
 //    ROS_INFO_STREAM("GRAD Y MAT "<<grad_y);
     cv::namedWindow("Sobel x", CV_WINDOW_NORMAL);
     cv::namedWindow("Sobel y", CV_WINDOW_NORMAL);
@@ -298,6 +298,9 @@ void drive_ros_marker_detection::MarkerDetection::imageCallback(const sensor_msg
             ROS_INFO_STREAM("Candidate detection found at: "<<i<<", "<<j<<" with rotation "<<rotation<<" saved to candidate: "<<cv::Point2d(i/grad_x.rows, j/grad_x.cols));
             candidate_detections.push_back(std::pair<cv::Point2d, double>(cv::Point2d((double)i/(double)grad_x.rows, (double)j/(double)grad_x.cols),
                                                                           rotation));
+          }
+          else {
+            ROS_INFO_STREAM("Candidate detection not found!");
           }
         }
       }
@@ -404,6 +407,10 @@ void drive_ros_marker_detection::MarkerDetection::imageCallback(const sensor_msg
                                                               rotation);
                 }
               }
+              else
+              {
+                ROS_WARN_STREAM("Lost track of candidate detection "<<candidate_detection.first<<" with rotation: "<<candidate_detection.second<<" at pyramid step "<<step);
+              }
             }
           }
         }
@@ -428,13 +435,15 @@ void drive_ros_marker_detection::MarkerDetection::imageCallback(const sensor_msg
       ss << "Detections of " << model_name << " in image";
       cv::namedWindow(ss.str(), cv::WINDOW_NORMAL);
       cv::Mat display_image;
-      cv::cvtColor(pyramid_images[num_pyramid_levels-1], display_image, CV_GRAY2BGR);
+      display_image = pyramid_images[num_pyramid_levels-1].clone();
+//      pyramid_images[num_pyramid_levels-1].convertTo(display_image, CV_8UC1);
+//      cv::cvtColor(display_image, display_image, CV_GRAY2BGR);
       cv::Point template_position;
       for (const std::pair<cv::Point2d, int>& detection : candidate_detections)
       {
         ROS_INFO_STREAM("Found the model "<<model_name<<" at: "<<detection.first.x<<", "<<detection.first.y<<" and rotation: "<<detection.second);
         cv::drawMarker(display_image, cv::Point((int)(detection.first.x*display_image.rows),
-                                                (int)(detection.first.y*display_image.cols)), cv::Scalar(0, 255, 0));
+                                                (int)(detection.first.y*display_image.cols)), cv::Scalar(255));
 //        m_type.level_ = num_coordinates;
 //        m_type.rotation_ = detection.second;
 //        template_position.x = (int)(detection.first.x * display_image.rows);
