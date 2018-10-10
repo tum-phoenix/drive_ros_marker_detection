@@ -1,4 +1,4 @@
-model_path: [/home/mykyta/catkin_ws/install/share/drive_ros_marker_detection/images/30_sign.yaml]
+model_path: [$(arg package_path)/images/30_sign.yaml]
 display_results: True
 greedy_factor: 0.3
 min_score: 50000

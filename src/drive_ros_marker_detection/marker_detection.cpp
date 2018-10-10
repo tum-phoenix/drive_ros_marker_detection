@@ -222,15 +222,21 @@ void drive_ros_marker_detection::MarkerDetection::imageCallback(const sensor_msg
 
   std::vector<std::pair<cv::Point2d, double> > candidate_detections; // position in image (relative to full width/height)/rotation
   // full search at highest level for each model
-  ModelType m_type(0, 0.0);
+  ModelIdentifier model_id("", ModelType(0, 0.0));
 
   double rotation_step;
   int num_pyramid_levels;
   double partial_score;
   std::pair<bool, double> matching_result;
 
+  if (display_results_)
+  {
+    cv::namedWindow("Currently checked template", CV_WINDOW_NORMAL);
+  }
+
   for (const std::string& model_name : model_names_)
   {
+    model_id.model_name_ = model_name;
     num_pyramid_levels = num_pyramid_levels_[model_name];
     rotation_step = rotation_steps_lowest_level_[model_name]*std::pow(2.0, num_pyramid_levels);
 
@@ -241,8 +247,9 @@ void drive_ros_marker_detection::MarkerDetection::imageCallback(const sensor_msg
         for (double rotation = 0.0; rotation < 360.0; rotation += rotation_step)
         {
           ROS_INFO_STREAM("checking model "<<model_name<<" with rotation "<<rotation<<" at image coordinates "<<i<<", "<<j);
-          m_type.rotation_ = rotation;
-          if (matchModel(i, j, m_type, pyramid_grad_x[0], pyramid_grad_y[0], pyramid_magnitudes[0], model_name).first)
+          model_id.model_type_.rotation_ = rotation;
+          matching_result = matchModel(i, j, model_id, pyramid_grad_x[0], pyramid_grad_y[0], pyramid_magnitudes[0]);
+          if (matching_result.first)
           {
             ROS_INFO_STREAM("Candidate detection found at: "<<i<<", "<<j<<" with rotation "<<rotation<<" saved to candidate: "<<cv::Point2d(i/grad_x.rows, j/grad_x.cols));
             candidate_detections.push_back(std::pair<cv::Point2d, double>(cv::Point2d((double)i/(double)grad_x.rows,
@@ -251,6 +258,16 @@ void drive_ros_marker_detection::MarkerDetection::imageCallback(const sensor_msg
           }
           else {
             ROS_INFO_STREAM("Candidate detection not found!");
+          }
+
+          if (display_results_)
+          {
+            cv::Mat display_image = pyramid_images[0].clone();
+            showTemplateAndLabel(display_image,
+                std::pair<cv::Point2d, double>(cv::Point2d((double)i/(double)grad_x.rows,
+                                                           (double)j/(double)grad_x.cols),
+                                               rotation), model_id, matching_result.first);
+            display_image.release();
           }
         }
       }
@@ -273,7 +290,7 @@ void drive_ros_marker_detection::MarkerDetection::imageCallback(const sensor_msg
       grad_x = pyramid_grad_x[step];
       grad_y = pyramid_grad_y[step];
       source_magnitude = pyramid_magnitudes[step];
-      m_type.level_ -= 1;
+      model_id.model_type_.level_ -= 1;
       rotation_step *= 0.5;
       search_img = pyramid_images[step];
 
@@ -297,9 +314,9 @@ void drive_ros_marker_detection::MarkerDetection::imageCallback(const sensor_msg
                  rotation <= candidate_detection.second + rotation_step; rotation += rotation_step)
             {
               ROS_INFO_STREAM("checking candidate for model "<<model_name<<" saved as "<<candidate_detection.first<<" with rotation "<<rotation<<" at image coordinates "<<i<<", "<<j<<" for pyramid level "<<step);
-              m_type.rotation_ = rotation;
-              matching_result = matchModel(i, j, m_type, pyramid_grad_x[step], pyramid_grad_y[step],
-                                           pyramid_magnitudes[step], model_name);
+              model_id.model_type_.rotation_ = rotation;
+              matching_result = matchModel(i, j, model_id, pyramid_grad_x[step], pyramid_grad_y[step],
+                                           pyramid_magnitudes[step]);
               if (matching_result.first)
               {
                 if (matching_result.second > best_score)
@@ -314,6 +331,13 @@ void drive_ros_marker_detection::MarkerDetection::imageCallback(const sensor_msg
               else
               {
                 ROS_WARN_STREAM("Lost track of candidate detection "<<candidate_detection.first<<" with rotation: "<<candidate_detection.second<<" at pyramid step "<<step);
+              }
+
+              if (display_results_)
+              {
+                cv::Mat display_image = pyramid_images[step].clone();
+                showTemplateAndLabel(display_image, candidate_detection, model_id, matching_result.first);
+                display_image.release();
               }
             }
           }
@@ -339,36 +363,39 @@ void drive_ros_marker_detection::MarkerDetection::imageCallback(const sensor_msg
       ss << "Detections of " << model_name << " in image";
       cv::Mat display_image;
       display_image = pyramid_images[num_pyramid_levels-1].clone();
-      m_type.level_ = 0;
+      model_id.model_type_.level_ = 0;
       for (const std::pair<cv::Point2d, int>& detection : candidate_detections)
       {
         ROS_INFO_STREAM("Found the model "<<model_name<<" at: "<<detection.first.x<<", "<<detection.first.y<<" and rotation: "<<detection.second);
-        m_type.rotation_ = detection.second;
-        drawTemplate(display_image, detection, model_coordinates_x_[model_name][m_type],
-                     model_coordinates_y_[model_name][m_type], ss.str());
+        model_id.model_type_.rotation_ = detection.second;
+        drawTemplate(display_image, detection, model_id);
       }
+      cv::imshow(ss.str(), display_image);
+      cv::waitKey(0);
+      cv::destroyWindow(ss.str());
+      display_image.release();
     }
   }
 }
 
 std::pair<bool, double> drive_ros_marker_detection::MarkerDetection::matchModel(int i, int j,
-                                                                                const ModelType m_type,
+                                                                                const ModelIdentifier &model_id,
                                                                                 const cv::Mat &pyramid_grad_x,
                                                                                 const cv::Mat &pyramid_grad_y,
-                                                                                const cv::Mat &pyramid_magnitude,
-                                                                                const std::string &model_name)
+                                                                                const cv::Mat &pyramid_magnitude)
 {
   double partial_sum = 0.0;
   double partial_score = 0.0;
+  bool matching_result = true;
 
-  int num_coordinates = model_coordinates_x_[model_name][m_type].size();
+  int num_coordinates = model_coordinates_x_[model_id.model_name_][model_id.model_type_].size();
   ROS_INFO_STREAM("Number of coordinates to check: "<<num_coordinates);
   for( int m = 0; m < num_coordinates; m++)
   {
-    int cur_x    = i + model_coordinates_x_[model_name][m_type][m];    // template X coordinate
-    int cur_y    = j + model_coordinates_y_[model_name][m_type][m];    // template Y coordinate
-    double i_tx    = grad_x_models_[model_name][m_type][m];    // template X derivative
-    double i_ty    = grad_y_models_[model_name][m_type][m];    // template Y derivative
+    int cur_x    = i + model_coordinates_x_[model_id.model_name_][model_id.model_type_][m];    // template X coordinate
+    int cur_y    = j + model_coordinates_y_[model_id.model_name_][model_id.model_type_][m];    // template Y coordinate
+    double i_tx    = grad_x_models_[model_id.model_name_][model_id.model_type_][m];    // template X derivative
+    double i_ty    = grad_y_models_[model_id.model_name_][model_id.model_type_][m];    // template Y derivative
 
     if(cur_x < 0 || cur_y < 0|| cur_x > pyramid_grad_x.rows-1 || cur_y > pyramid_grad_x.cols-1)
       continue;
@@ -382,7 +409,7 @@ std::pair<bool, double> drive_ros_marker_detection::MarkerDetection::matchModel(
       //+ Source Y derivative * Template Y derivative)) / Edge
       //magnitude of(Template)* edge magnitude of(Source))
       partial_sum = partial_sum + ((i_sx*i_tx)+(i_sy*i_ty)) /
-          (magnitude_models_[model_name][m_type][m] * pyramid_magnitude.at<double>(cur_x, cur_y));
+          (magnitude_models_[model_id.model_name_][model_id.model_type_][m] * pyramid_magnitude.at<double>(cur_x, cur_y));
 
     }
 
@@ -401,19 +428,18 @@ std::pair<bool, double> drive_ros_marker_detection::MarkerDetection::matchModel(
                              norm_greediness*sum_coords, norm_min_score * sum_coords)))
     {
       ROS_INFO_STREAM("[marker_detection] MatchModel(): Did "<<m<<" checks before cancel");
-      return std::pair<bool, double>(false, partial_score);
+      matching_result = false;
+      break;
     }
 //            ROS_INFO_STREAM("Partial score after "<<m<<" checks: "<<partial_score<<" cancel conditions: "<< (min_score_ - 1) + norm_greediness*sum_coords<<" and "<<norm_min_score * sum_coords);
   }
 
-  return std::pair<bool, double>(true, partial_score);
+  return std::pair<bool, double>(matching_result, partial_score);
 }
 
 void drive_ros_marker_detection::MarkerDetection::drawTemplate(cv::Mat &img,
                                                                const std::pair<cv::Point2d, double> &template_coordinates,
-                                                               const std::vector<int> &pixel_coordinates_x,
-                                                               const std::vector<int> &pixel_coordinates_y,
-                                                               const std::string &window_name,
+                                                               const ModelIdentifier &model_id,
                                                                const cv::Vec3b &color)
 {
   if (img.type() == CV_8UC1)
@@ -428,17 +454,39 @@ void drive_ros_marker_detection::MarkerDetection::drawTemplate(cv::Mat &img,
     return;
   }
 
-  cv::namedWindow(window_name, CV_WINDOW_NORMAL);
   cv::Point image_anchor((int)(img.rows*template_coordinates.first.x), (int)(img.cols*template_coordinates.first.y));
 
-  for (int i=0; i<pixel_coordinates_x.size(); ++i)
+  for (int i=0; i<model_coordinates_x_[model_id.model_name_][model_id.model_type_].size(); ++i)
   {
-    img.at<cv::Vec3b>(cv::Point(pixel_coordinates_x[i], pixel_coordinates_y[i])+image_anchor) = color;
+    img.at<cv::Vec3b>(cv::Point(model_coordinates_x_[model_id.model_name_][model_id.model_type_][i]+image_anchor.x,
+        model_coordinates_y_[model_id.model_name_][model_id.model_type_][i]+image_anchor.y)) = color;
   }
+}
 
+void drive_ros_marker_detection::MarkerDetection::drawTextLabel(cv::Mat &img, const ModelType &m_type,
+                                                                bool success)
+{
+  std::stringstream ss;
+  ss << "Detection at pyramid step "<<m_type.level_<<" with rotation "<<m_type.rotation_<<" success: "<<success;
+  cv::putText(img, ss.str(), cv::Point((int)(img.rows*0.1), (int)(img.cols*0.1)), CV_FONT_HERSHEY_SIMPLEX, 0.3,
+              cv::Scalar(255, 255, 255));
+}
+
+void drive_ros_marker_detection::MarkerDetection::showTemplateAndLabel(cv::Mat &img,
+                                                                       const std::pair<cv::Point2d, double>
+                                                                       &template_coordinates,
+                                                                       const drive_ros_marker_detection::ModelIdentifier
+                                                                       &model_id,
+                                                                       bool success, const std::string &window_name,
+                                                                       const cv::Vec3b &color)
+{
+  drawTemplate(img, template_coordinates, model_id, color);
+  drawTextLabel(img, model_id.model_type_, success);
   cv::imshow(window_name, img);
-  cv::waitKey(0);
-  return;
+  if (success)
+    cv::waitKey(0);
+  else
+    cv::waitKey(50);
 }
 
 void drive_ros_marker_detection::MarkerDetectionNodelet::onInit()

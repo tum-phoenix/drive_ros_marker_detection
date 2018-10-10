@@ -1,4 +1,4 @@
 <launch>
     <remap from="/image_publisher/image_raw" to="/warped_image"/>
-    <node name="image_publisher" pkg="image_publisher" type="image_publisher" respawn="false" output="screen" args="/home/mykyta/Pictures/Homographied_screenshot_03.10.2018.png"/>
+    <node name="image_publisher" pkg="image_publisher" type="image_publisher" respawn="false" output="screen" args="$(find drive_ros_marker_detection)/images/Homographied_screenshot_10.10.2018.png"/>
 </launch>

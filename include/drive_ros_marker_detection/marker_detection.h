@@ -24,6 +24,16 @@ struct ModelType
   double rotation_;
 };
 
+struct ModelIdentifier
+{
+  ModelIdentifier(): model_name_(), model_type_() {}
+  ModelIdentifier(const std::string &model_name, const ModelType &model_type): model_name_(model_name), model_type_(model_type)
+  {}
+
+  std::string model_name_;
+  ModelType model_type_;
+};
+
 class MarkerDetection
 {
 public:
@@ -34,16 +44,20 @@ public:
   void imageCallback(const sensor_msgs::ImageConstPtr& msg);
 
 private:
-  std::pair<bool, double> matchModel(int i, int j, const ModelType m_type, const cv::Mat &pyramid_grad_x,
-                                     const cv::Mat &pyramid_grad_y, const cv::Mat &pyramid_magnitude,
-                                     const std::string &model_name);
+  std::pair<bool, double> matchModel(int i, int j, const ModelIdentifier &model_id, const cv::Mat &pyramid_grad_x,
+                                     const cv::Mat &pyramid_grad_y, const cv::Mat &pyramid_magnitude);
 
   void drawTemplate(cv::Mat &img,
                     const std::pair<cv::Point2d, double> &template_coordinates,
-                    const std::vector<int> &pixel_coordinates_x,
-                    const std::vector<int> &pixel_coordinates_y,
-                    const std::string &window_name = "Template in image",
+                    const ModelIdentifier &model_id,
                     const cv::Vec3b &color = cv::Vec3b(255, 0, 0));
+
+  void drawTextLabel(cv::Mat &img, const ModelType &m_type, bool success);
+
+  void showTemplateAndLabel(cv::Mat &img, const std::pair<cv::Point2d, double> &template_coordinates,
+                            const ModelIdentifier &model_id, bool success,
+                            const std::string &window_name = "Currently checked template",
+                            const cv::Vec3b &color = cv::Vec3b(255, 0, 0));
 
   ros::NodeHandle nh_;
   ros::NodeHandle pnh_;

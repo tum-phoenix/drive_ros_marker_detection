@@ -1,5 +1,5 @@
-reference_image_path: /home/mykyta/catkin_ws/src/drive_ros_marker_detection/images/30_sign.png
-save_path: /home/mykyta/catkin_ws/install/share/drive_ros_marker_detection/images/30_sign
+reference_image_path: $(arg package_path)/images/30_sign.png
+save_path: $(arg package_path)/images/30_sign
 display_results: True
 model_template_size: [70, 175]
 num_pyramid_levels: 2
