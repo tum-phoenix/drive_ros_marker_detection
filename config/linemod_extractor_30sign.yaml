@@ -1,8 +1,0 @@
-reference_image_path: $(arg package_path)/images/30_sign.png
-save_path: $(arg package_path)/images/30_sign
-display_results: True
-model_template_size: [40, 94]
-num_pyramid_levels: 3
-rotation_step: 3.75
-min_contrast: 0.01
-max_contrast: 0.02

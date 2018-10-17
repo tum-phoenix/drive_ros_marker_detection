@@ -41,6 +41,7 @@
 //M*/
 
 #include "drive_ros_marker_detection/precomp.hpp"
+#include <ros/ros.h>
 
 namespace cv
 {
@@ -987,7 +988,7 @@ static void orUnaligned8u(const uchar * src, const int src_stride,
 static void spread(const Mat& src, Mat& dst, int T)
 {
   // Allocate and zero-initialize spread (OR'ed) image
-  dst = Mat::zeros(src.size(), CV_8U);
+  dst = cv::Mat::zeros(src.size(), CV_8U);
 
   // Fill in spread gradient image (section 2.3)
   for (int r = 0; r < T; ++r)
@@ -995,8 +996,8 @@ static void spread(const Mat& src, Mat& dst, int T)
     int height = src.rows - r;
     for (int c = 0; c < T; ++c)
     {
-      orUnaligned8u(&src.at<unsigned char>(r, c), static_cast<const int>(src.step1()), dst.ptr(),
-                    static_cast<const int>(dst.step1()), src.cols - c, height);
+      orUnaligned8u(&src.at<unsigned char>(r, c), static_cast<int>(src.step1()), dst.ptr(),
+                    static_cast<int>(dst.step1()), src.cols - c, height);
     }
   }
 }
