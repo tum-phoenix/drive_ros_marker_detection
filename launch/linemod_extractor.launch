@@ -1,0 +1,10 @@
+<launch>
+    <arg name="debug" default="false"/>
+    <arg if="$(arg debug)" name="launch-prefix" value="gdb -ex run --args"/>
+    <arg unless="$(arg debug)" name="launch-prefix" value=""/>
+    <arg name="package_path" value="$(find drive_ros_marker_detection)"/>
+
+    <node name="linemod_extractor_node" pkg="drive_ros_marker_detection" type="linemod_extractor_node" respawn="false" output="screen" launch-prefix="$(arg launch-prefix)">
+        <rosparam command="load" file="$(find drive_ros_marker_detection)/config/linemod_extractor_30sign.yaml" subst_value="True">$(arg package_path)</rosparam>
+    </node>
+</launch>

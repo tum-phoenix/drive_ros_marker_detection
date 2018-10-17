@@ -260,7 +260,7 @@ void drive_ros_marker_detection::MarkerDetection::imageCallback(const sensor_msg
             ROS_INFO_STREAM("Candidate detection not found!");
           }
 
-          if (display_results_)
+          if (display_results_ && matching_result.second > 0.0)
           {
             cv::Mat display_image = pyramid_images[0].clone();
             showTemplateAndLabel(display_image,
@@ -403,6 +403,7 @@ std::pair<bool, double> drive_ros_marker_detection::MarkerDetection::matchModel(
     double i_sx = pyramid_grad_x.at<double>(cur_x, cur_y); // get corresponding  X derivative from source image
     double i_sy = pyramid_grad_y.at<double>(cur_x, cur_y); // get corresponding  Y derivative from source image
 
+    ROS_INFO_STREAM("i_sx "<<i_sx<<" i_sy "<<i_sy<<" i_tx "<<i_tx<<" i_ty "<<i_ty<<" pyr mag "<<pyramid_magnitude.at<double>(cur_x, cur_y)<<" model mag "<<magnitude_models_[model_id.model_name_][model_id.model_type_][m]);
     if((i_sx != 0 || i_sy != 0) && ( i_tx!=0 || i_ty!=0))
     {
       //partial Sum  = Sum of(((Source X derivative* Template X drivative)
@@ -427,7 +428,8 @@ std::pair<bool, double> drive_ros_marker_detection::MarkerDetection::matchModel(
     if( partial_score < (MIN((min_score_ - 1) +
                              norm_greediness*sum_coords, norm_min_score * sum_coords)))
     {
-      ROS_INFO_STREAM("[marker_detection] MatchModel(): Did "<<m<<" checks before cancel");
+      ROS_INFO_STREAM("[marker_detection] MatchModel(): Did "<<m<<" checks before cancel, partial score "<<partial_score<<" conditions: "<<(min_score_ - 1) +
+                      norm_greediness*sum_coords<<" and: "<<norm_min_score * sum_coords);
       matching_result = false;
       break;
     }

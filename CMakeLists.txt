@@ -18,7 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-find_package(OpenCV 3 REQUIRED)
+find_package(OpenCV 3.3.1 REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -116,11 +116,14 @@ catkin_package(
 ## Build ##
 ###########
 
+message(WARN "OpenCV_INCLUDE_DIRS = ${OpenCV_INCLUDE_DIRS}")
+
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ executable
@@ -129,6 +132,8 @@ include_directories(
 add_executable(marker_detection_node src/marker_detection_node.cpp src/${PROJECT_NAME}/marker_detection.cpp)
 
 add_executable(feature_extractor_node src/feature_extractor_node.cpp)
+
+add_executable(linemod_extractor_node src/linemod_extractor_node.cpp src/linemod.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -150,6 +155,11 @@ add_dependencies(feature_extractor_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${ca
 
 
 target_link_libraries(feature_extractor_node
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+
+target_link_libraries(linemod_extractor_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
 )
@@ -180,7 +190,7 @@ target_link_libraries(marker_detection_nodelet
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS marker_detection_node marker_detection_nodelet feature_extractor_node
+install(TARGETS marker_detection_node marker_detection_nodelet feature_extractor_node linemod_extractor_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

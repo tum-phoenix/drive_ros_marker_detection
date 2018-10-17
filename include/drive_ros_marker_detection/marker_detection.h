@@ -50,14 +50,14 @@ private:
   void drawTemplate(cv::Mat &img,
                     const std::pair<cv::Point2d, double> &template_coordinates,
                     const ModelIdentifier &model_id,
-                    const cv::Vec3b &color = cv::Vec3b(255, 0, 0));
+                    const cv::Vec3b &color = cv::Vec3b(0, 255, 0));
 
   void drawTextLabel(cv::Mat &img, const ModelType &m_type, bool success);
 
   void showTemplateAndLabel(cv::Mat &img, const std::pair<cv::Point2d, double> &template_coordinates,
                             const ModelIdentifier &model_id, bool success,
                             const std::string &window_name = "Currently checked template",
-                            const cv::Vec3b &color = cv::Vec3b(255, 0, 0));
+                            const cv::Vec3b &color = cv::Vec3b(0, 255, 0));
 
   ros::NodeHandle nh_;
   ros::NodeHandle pnh_;
