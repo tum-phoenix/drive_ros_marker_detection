@@ -66,6 +66,7 @@ int main(int argc, char **argv)
   {
     cv::Mat reference_image = cv::imread(reference_image_path);
 
+    cv::cvtColor(reference_image, reference_image, CV_RGB2GRAY);
     if(!reference_image.data )
     {
       ROS_INFO("Could not open or find the reference image located at: %s", reference_image_path.c_str());
@@ -77,8 +78,12 @@ int main(int argc, char **argv)
 
     std::vector<cv::Mat> model_sources;
     model_sources.push_back(reference_image);
-    cv::Mat model_mask;
-    cv::bitwise_not(reference_image, model_mask);
+    cv::Mat model_mask(reference_image.size(), reference_image.type(), cv::Scalar(255));
+//    cv::bitwise_not(reference_image, model_mask);
+//    cv::bitwise_not(model_mask, model_mask);
+    cv::namedWindow("Mask", CV_WINDOW_NORMAL);
+    cv::imshow("Mask", model_mask);
+    cv::waitKey(0);
     det->addTemplate(model_sources, model_name, model_mask);
   }
 
@@ -117,6 +122,8 @@ int main(int argc, char **argv)
       return -1;
     }
 
+    ROS_INFO_STREAM("Detector pyramid levels: "<<det->pyramidLevels()<<" num classes: "<<det->numClasses()<<" number of modalities: "<<det->getModalities().size());
+
     cv::namedWindow("Detections in image", CV_WINDOW_NORMAL);
     std::vector<cv::linemod::Match> test_matches;
     for (const cv::Mat& test_image : test_images)
@@ -124,7 +131,9 @@ int main(int argc, char **argv)
       std::vector<cv::Mat> test_modalities;
       // todo: fill test modalities, default linemod uses only the image itself
       test_modalities.push_back(test_image.clone());
-      det->match(test_modalities, test_threshold, test_matches);
+      det->match(test_modalities, (float)test_threshold, test_matches);
+
+      ROS_INFO_STREAM("Detections found: "<<test_matches.size());
 
       cv::Mat display = test_image.clone();
 

@@ -1,5 +1,7 @@
 reference_image_paths: [$(arg package_path)/images/30_sign.png]
+display_results: True
 save_path: $(arg package_path)/linemod
 test_detector: True
-test_image_paths: [$(arg package_path)/images/Homographied_screenshot_10.10.2018.png]
-test_threshold: 0.01
+#test_image_paths: [$(arg package_path)/images/Homographied_screenshot_10.10.2018.png]
+test_image_paths: [$(arg package_path)/images/test_image.png]
+test_threshold: 20000.0
