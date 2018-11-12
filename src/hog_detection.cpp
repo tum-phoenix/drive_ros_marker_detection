@@ -2,6 +2,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/highgui.hpp>
 #include <opencv2/features2d.hpp>
+#include <opencv2/objdetect.hpp>
 
 namespace drive_ros_marker_detection {
 
@@ -101,7 +102,32 @@ void HogDetection::processImage(const cv::Mat &img_in)
 
 //  cv::namedWindow("image keypoints", cv::WINDOW_NORMAL);
 //  cv::imshow("image keypoints", img_with_keypoints);
-//  cv::waitKey(0);
+  //  cv::waitKey(0);
+}
+
+void HogDetection::computeHOG(const cv::Size win_size, const cv::Mat &img_in, cv::Mat &gradient_out, bool use_flip)
+{
+  cv::HOGDescriptor hog;
+  hog.winSize = win_size;
+  cv::Mat gray;
+  std::vector<float> descriptors;
+
+  if ( img_in.cols >= win_size.width && img_in.rows >= win_size.height )
+  {
+    cv::Rect r = cv::Rect( (img_in.cols - win_size.width)/2,
+                  (img_in.rows - win_size.height)/2,
+                  win_size.width,
+                  win_size.height);
+    cv::cvtColor(img_in(r), gray, cv::COLOR_BGR2GRAY);
+    hog.compute( gray, descriptors, cv::Size(8, 8), cv::Size(0, 0));
+    gradient_out = cv::Mat(descriptors).clone();
+    if ( use_flip )
+    {
+      flip( gray, gray, 1 );
+      hog.compute( gray, descriptors, cv::Size( 8, 8 ), cv::Size( 0, 0 ) );
+      gradient_out = cv::Mat(descriptors).clone();
+    }
+  }
 }
 
 }
