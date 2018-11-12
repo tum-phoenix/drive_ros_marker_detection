@@ -36,11 +36,12 @@ void HogDetection::processImage(const cv::Mat &img_in)
   int nLabels = cv::connectedComponentsWithStats(thresholded_image, label_image, stats, centroids, 8, CV_32S);
 
   // get bounding rectangle to preprocess based on size and aspect ratio
+  int x, y, w, h;
   for(int i=0; i<stats.rows; i++) {
-    int x = stats.at<int>(cv::Point(0, i));
-    int y = stats.at<int>(cv::Point(1, i));
-    int w = stats.at<int>(cv::Point(2, i));
-    int h = stats.at<int>(cv::Point(3, i));
+    x = stats.at<int>(cv::Point(0, i));
+    y = stats.at<int>(cv::Point(1, i));
+    w = stats.at<int>(cv::Point(2, i));
+    h = stats.at<int>(cv::Point(3, i));
   }
 
   std::vector<cv::Vec3b> colors(nLabels);
@@ -49,13 +50,26 @@ void HogDetection::processImage(const cv::Mat &img_in)
       colors[label] = cv::Vec3b( (rand()&255), (rand()&255), (rand()&255) );
   }
   cv::Mat draw_image(label_image.size(), CV_8UC3);
-  for(int r = 0; r < draw_image.rows; ++r){
-      for(int c = 0; c < draw_image.cols; ++c){
+  for(int r = 0; r < draw_image.rows; ++r)
+  {
+      for(int c = 0; c < draw_image.cols; ++c)
+      {
           int label = label_image.at<int>(r, c);
           cv::Vec3b &pixel = draw_image.at<cv::Vec3b>(r, c);
           pixel = colors[label];
        }
    }
+
+  for(int label = 1; label < nLabels; ++label)
+  {
+      x = stats.at<int>(cv::Point(0, label));
+      y = stats.at<int>(cv::Point(1, label));
+      w = stats.at<int>(cv::Point(2, label));
+      h = stats.at<int>(cv::Point(3, label));
+
+      if (w > 20 && w < 80 && h > 20 && h < 80 && std::abs(std::max(w/h, h/w)-1.0) < 0.8)
+        cv::rectangle(draw_image, cv::Point(x, y), cv::Point(x+w, y+h), colors[label]);
+  }
   cv::namedWindow("Connected components", cv::WINDOW_NORMAL);
   cv::imshow("Connected components", draw_image);
   cv::waitKey(0);
