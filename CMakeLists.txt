@@ -135,6 +135,8 @@ add_executable(feature_extractor_node src/feature_extractor_node.cpp)
 
 add_executable(linemod_extractor_node src/linemod_extractor_node.cpp src/linemod.cpp)
 
+add_executable(hog_detector_node src/hog_detector_node.cpp src/hog_detection.cpp)
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -175,6 +177,13 @@ target_link_libraries(marker_detection_nodelet
     ${OpenCV_LIBRARIES}
     )
 
+add_dependencies(hog_detector_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+target_link_libraries(hog_detector_node
+    ${catkin_LIBRARIES}
+    ${OpenCV_LIBRARIES}
+    )
+
 #############
 ## Install ##
 #############
@@ -190,7 +199,7 @@ target_link_libraries(marker_detection_nodelet
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS marker_detection_node marker_detection_nodelet feature_extractor_node linemod_extractor_node
+install(TARGETS marker_detection_node marker_detection_nodelet feature_extractor_node linemod_extractor_node hog_detector_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

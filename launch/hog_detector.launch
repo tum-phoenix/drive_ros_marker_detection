@@ -1,0 +1,10 @@
+<launch>
+    <arg name="debug" default="false"/>
+    <arg if="$(arg debug)" name="launch-prefix" value="gdb -ex run --args"/>
+    <arg unless="$(arg debug)" name="launch-prefix" value=""/>
+    <arg name="package_path" value="$(find drive_ros_marker_detection)"/>
+
+    <node name="hog_detector_node" pkg="drive_ros_marker_detection" type="hog_detector_node" respawn="false" output="screen" launch-prefix="$(arg launch-prefix)">
+        <remap from="~/img_in" to="/warped_image"/>
+    </node>
+</launch>
