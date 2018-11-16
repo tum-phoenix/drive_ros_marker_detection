@@ -4,7 +4,7 @@
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <opencv2/imgproc/imgproc.hpp>
-#include "opencv2/ml.hpp"
+#include <opencv2/objdetect.hpp>
 
 namespace drive_ros_marker_detection {
 
@@ -17,12 +17,13 @@ private:
   void imageCallback(const sensor_msgs::ImageConstPtr &msg);
   void processImage(const cv::Mat &img_in);
 
-  void computeHOG(const cv::Size win_size, const cv::Mat &img_in, cv::Mat &gradient_out, bool use_flip);
-
   ros::NodeHandle nh_;
   ros::NodeHandle pnh_;
   image_transport::Subscriber image_sub_;
-  cv::Ptr<cv::ml::SVM> svm_;
+  std::string internal_image_encoding_;
+  cv::Size window_size_;
+  bool use_preprocessing_;
+  cv::HOGDescriptor hog_;
 };
 
 }
