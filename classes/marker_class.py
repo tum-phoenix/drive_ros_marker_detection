@@ -15,7 +15,7 @@ marker_name_dict = {
         8: '90_speed_limit',
         9: 'end_10_speed_limit',
         10: 'end_20_speed_limit',
-        11: 'end_30_speed_limit'.
+        11: 'end_30_speed_limit',
         12: 'end_40_speed_limit',
         13: 'end_50_speed_limit',
         14: 'end_60_speed_limit',
@@ -25,13 +25,13 @@ marker_name_dict = {
         18: 'right_arrow',
         19: 'left_arrow',
         20: 'startline',
-        21: 'crossing_line_broken',
-        22: 'crossing_line_continuous',
-        23: 'crossing_turning_line_left',
-        24: 'crossing_turning_right_left',
+        21: 'broken_crossing_line',
+        22: 'continuous_crossing_line',
+        23: 'left_crossing_turning_line',
+        24: 'right_crossing_turning_line',
         25: 'startline',
         26: 'zebra_crossing'
 }
 
 with open('marker_name_dict.pkl', 'wb') as f:
-pickle.dump(marker_name_dict, f)
+    pickle.dump(marker_name_dict, f)
