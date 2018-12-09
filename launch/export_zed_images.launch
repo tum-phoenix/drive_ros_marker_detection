@@ -1,0 +1,15 @@
+<launch>
+  <arg name="rosbag_location" default="/data/Bags/drive_2018-11-24-16-36-21.bag"/>
+  <node pkg="rosbag" type="play" name="rosbag" required="true" args="$(arg rosbag_location)"/>
+<!--  <include file="$(find drive_ros_image_recognition)/launch/warp_image.launch">
+    <arg name="output_image_type" value="16"/>
+  </include>-->
+  <node name="extract" pkg="image_view" type="image_saver" respawn="false" required="true" output="screen" cwd="ROS_HOME">
+    <remap from="image" to="/zed/right/image_raw_color"/>
+    <param name="filename_format" type="str" value="frame%04i.png"/>
+  </node>
+<!--  <node name="extract_warped" pkg="image_view" type="extract_images" respawn="false" required="true" output="screen" cwd="/data/Images">
+    <remap from="image" to="/warped_image"/>
+    <param name="filename_format" value="warped_frame%04d.jpg"/>
+  </node>-->
+</launch>
